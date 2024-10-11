@@ -6,9 +6,9 @@ class HashTable {
 private:
     vector<int> table;
     vector<bool> occupied;
-    int tableSize;//size of the hash table
-    int numElements;//number of elements currently in the table
-    const double loadFactorThreshold = 0.8; // Load factor threshold for resizing
+    int tableSize;
+    int numElements;
+
 public:
     HashTable(int size) {
         tableSize = size;
