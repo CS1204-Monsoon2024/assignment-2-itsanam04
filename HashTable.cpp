@@ -10,7 +10,7 @@ private:
     vector<bool> occupied;
     int tableSize;
     int numElements;
-    const double loadFactorThreshold = 0.5;  // Resize when more than 50% full
+    const double loadFactorThreshold = 0.8;  // Resize when more than 50% full
 
     // Helper function to calculate hash
     int hashFunction(int key) {
