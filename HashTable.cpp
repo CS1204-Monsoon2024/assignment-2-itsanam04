@@ -7,144 +7,118 @@ using namespace std;
 class HashTable {
 private:
     vector<int> table;
-    vector<bool> occupied;
-    int tableSize;
-    int numElements;
-    const double loadFactorThreshold = 0.8;  // Resize when more than 50% full
+    int size;
+    int count; // To track the number of elements in the hash table
+    const double loadFactorThreshold = 0.8;
 
-    // Helper function to calculate hash
     int hashFunction(int key) {
-        return key % tableSize;
+        return key % size;
     }
 
-    // Helper function to check if a number is prime
-    bool isPrime(int n) {
-        if (n <= 1) return false;
-        if (n <= 3) return true;
-        if (n % 2 == 0 || n % 3 == 0) return false;
-        for (int i = 5; i * i <= n; i += 6) {
-            if (n % i == 0 || n % (i + 2) == 0) return false;
+    bool isPrime(int num) {
+        if (num <= 1) return false;
+        if (num == 2) return true;
+        for (int i = 2; i <= sqrt(num); i++) {
+            if (num % i == 0) return false;
         }
         return true;
     }
 
-    // Helper function to find the next prime number greater than n
-    int nextPrime(int n) {
-        while (!isPrime(n)) {
-            n++;
+    int nextPrime(int num) {
+        while (!isPrime(num)) {
+            num++;
         }
-        return n;
+        return num;
     }
 
-    // Helper function to resize the table
-    void resize() {
-        int newSize = nextPrime(tableSize * 2);  // Find next prime >= 2 * tableSize
-        vector<int> oldTable = table;
-        vector<bool> oldOccupied = occupied;
+    void rehash() {
+        int newSize = nextPrime(size * 2); // Double the size and find the next prime
+        vector<int> oldTable = table;      // Backup the current table
+        table.clear();
+        table.resize(newSize, -1); // Resize the table to the new size
+        size = newSize;
+        count = 0; // Reset the count and reinsert existing elements
 
-        tableSize = newSize;
-        table.resize(newSize, -1);
-        occupied.resize(newSize, false);
-        numElements = 0;
-
-        // Reinsert old elements into the resized table
-        for (int i = 0; i < oldTable.size(); i++) {
-            if (oldOccupied[i]) {
-                insert(oldTable[i]);
+        for (int value : oldTable) {
+            if (value != -1) {
+                insert(value); // Reinsert elements
             }
         }
+    }
+
+    double currentLoadFactor() {
+        return (double) count / size; // Calculate the load factor
     }
 
 public:
-    // Constructor
-    HashTable(int size) {
-        tableSize = nextPrime(size);  // Initialize size as the next prime number
-        table.resize(tableSize, -1);  // Initialize with -1 (indicating empty)
-        occupied.resize(tableSize, false);  // All slots are initially unoccupied
-        numElements = 0;
+    HashTable(int initialSize) {
+        size = nextPrime(initialSize); // Ensure the size is prime
+        table.resize(size, -1);        // Initialize table with -1 (empty slots)
+        count = 0;
     }
 
-    // Insert function using quadratic probing
     void insert(int key) {
-        // Check for duplicates
-        if (search(key) != -1) {
-            cout << "Duplicate key insertion is not allowed" << endl;
-            return;
-        }
-
-        // Resize if load factor is exceeded
-        if (numElements >= tableSize * loadFactorThreshold) {
-            resize();
+        // Check if resizing is needed based on the load factor
+        if (currentLoadFactor() > loadFactorThreshold) {
+            rehash();
         }
 
         int index = hashFunction(key);
         int i = 0;
-
-        // Quadratic probing to find an available slot
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-            if (!occupied[newIndex]) {
-                table[newIndex] = key;
-                occupied[newIndex] = true;
-                numElements++;
+        while (table[(index + i * i) % size] != -1) {
+            if (table[(index + i * i) % size] == key) {
+                cout << "Duplicate key insertion is not allowed" << endl;
                 return;
             }
             i++;
+            if (i == size) {
+                cout << "Max probing limit reached!" << endl;
+                return;
+            }
         }
-
-        // If insertion fails after probing
-        cout << "Max probing limit reached!" << endl;
+        table[(index + i * i) % size] = key;
+        count++;
     }
 
-    // Remove function using quadratic probing
     void remove(int key) {
         int index = hashFunction(key);
         int i = 0;
-
-        // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-
-            // Key found, remove it
-            if (occupied[newIndex] && table[newIndex] == key) {
-                table[newIndex] = -1;  // Mark slot as empty
-                occupied[newIndex] = false;
-                numElements--;
+        while (table[(index + i * i) % size] != -1) {
+            if (table[(index + i * i) % size] == key) {
+                table[(index + i * i) % size] = -1;
+                count--;
                 return;
             }
             i++;
+            if (i == size) {
+                cout << "Max probing limit reached!" << endl;
+                return;
+            }
         }
-
-        // Key not found
         cout << "Element not found" << endl;
     }
 
-    // Search function using quadratic probing
     int search(int key) {
         int index = hashFunction(key);
         int i = 0;
-
-        // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-
-            // Key found
-            if (occupied[newIndex] && table[newIndex] == key) {
-                return newIndex;
+        while (table[(index + i * i) % size] != -1) {
+            if (table[(index + i * i) % size] == key) {
+                return (index + i * i) % size;
             }
             i++;
+            if (i == size) {
+                return -1; // Not found
+            }
         }
-
-        return -1;  // Key not found
+        return -1; // Not found
     }
-
-    // Print table function
+    //print table
     void printTable() {
-        for (int i = 0; i < tableSize; i++) {
-            if (occupied[i]) {
-                cout << table[i] << " ";
-            } else {
+        for (int i = 0; i < size; i++) {
+            if (table[i] == -1) {
                 cout << "- ";
+            } else {
+                cout << table[i] << " ";
             }
         }
         cout << endl;
