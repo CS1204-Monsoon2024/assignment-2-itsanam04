@@ -1,107 +1,120 @@
 #include <iostream>
 #include <vector>
-using namespace std;
+#include <optional>
+#include <stdexcept>
 
 class HashTable {
 private:
-    vector<int> table;
-    vector<bool> occupied;
-    int tableSize;
-    int numElements;
+    struct Entry {
+        int key;
+        int value;
+        bool isOccupied;
+        bool isTombstone;
+
+        Entry() : key(0), value(0), isOccupied(false), isTombstone(false) {}
+        Entry(int k, int v) : key(k), value(v), isOccupied(true), isTombstone(false) {}
+    };
+
+    std::vector<Entry> table;
+    size_t size;
+    size_t count;
+    static constexpr double LOAD_FACTOR_THRESHOLD = 0.8;
+
+    size_t hash(int key) const {
+        return static_cast<size_t>(key) % table.size();
+    }
+
+    size_t probe(int key, size_t i) const {
+        return (hash(key) + i * i) % table.size();
+    }
+
+    void resize() {
+        std::vector<Entry> oldTable = std::move(table);
+        size_t newSize = oldTable.size() * 2;
+        table = std::vector<Entry>(newSize);
+        size = newSize;
+        count = 0;
+
+        for (const auto& entry : oldTable) {
+            if (entry.isOccupied && !entry.isTombstone) {
+                insert(entry.key, entry.value);
+            }
+        }
+    }
 
 public:
-    HashTable(int size) {
-        tableSize = size-1;
-        table.resize(size, 0);  // Initialize with -1 (indicating empty slots)
-        occupied.resize(size, false);  // All slots are initially unoccupied
-        numElements = 0;
-    }
+    HashTable(size_t initialSize = 16) : table(initialSize), size(initialSize), count(0) {}
 
-    // Simple hash function (mod table size)
-    int hashFunction(int key) {
-        return key % tableSize;
-    }
-
-    // Insert function using quadratic probing
-    void insert(int key) {
-        // Check if the key already exists
-        if (search(key) != -1) {
-            cout << "Duplicate key insertion is not allowed" << endl;
-            return;
+    void insert(int key, int value) {
+        if (static_cast<double>(count) / size > LOAD_FACTOR_THRESHOLD) {
+            resize();
         }
 
-        int index = hashFunction(key);
-        int i = 0;
-
-        // Quadratic probing: search for the next empty slot
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-
-            // Insert if the slot is empty
-            if (!occupied[newIndex]) {
-                table[newIndex] = key;
-                occupied[newIndex] = true;
-                numElements++;
+        size_t i = 0;
+        while (i < size) {
+            size_t index = probe(key, i);
+            if (!table[index].isOccupied || table[index].isTombstone) {
+                table[index] = Entry(key, value);
+                count++;
+                return;
+            } else if (table[index].key == key) {
+                std::cout << "Duplicate key insertion is not allowed" << std::endl;
                 return;
             }
             i++;
         }
-
-        // If no empty slot was found
-        cout << "Max probing limit reached!" << endl;
+        std::cout << "Max probing limit reached!" << std::endl;
     }
 
-    // Remove function using quadratic probing
-    void remove(int key) {
-        int index = hashFunction(key);
-        int i = 0;
-
-        // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-
-            // Key found, remove it
-            if (occupied[newIndex] && table[newIndex] == key) {
-                table[newIndex] = -1;  // Mark slot as empty
-                occupied[newIndex] = false;
-                numElements--;
-                return;
+    std::optional<int> search(int key) const {
+        size_t i = 0;
+        while (i < size) {
+            size_t index = probe(key, i);
+            if (!table[index].isOccupied) {
+                return std::nullopt;
+            }
+            if (table[index].key == key && !table[index].isTombstone) {
+                return table[index].value;
             }
             i++;
         }
-
-        // Key not found
-        cout << "Element not found" << endl;
+        return std::nullopt;
     }
 
-    // Search function
-    int search(int key) {
-        int index = hashFunction(key);
-        int i = 0;
-
-        // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
-
-            // Key found
-            if (occupied[newIndex] && table[newIndex] == key) {
-                return newIndex;
+    bool remove(int key) {
+        size_t i = 0;
+        while (i < size) {
+            size_t index = probe(key, i);
+            if (!table[index].isOccupied) {
+                std::cout << "Element not found" << std::endl;
+                return false;
+            }
+            if (table[index].key == key && !table[index].isTombstone) {
+                table[index].isTombstone = true;
+                count--;
+                return true;
             }
             i++;
         }
-
-        return -1;  // Key not found
+        std::cout << "Element not found" << std::endl;
+        return false;
     }
 
-    // Print the hash table
-    void printTable() {
-        for (int i = 0; i < tableSize; i++) {
-            if (occupied[i]) {
-                cout << table[i] << " ";
+    void printTable() const {
+        for (size_t i = 0; i < size; ++i) {
+            if (table[i].isOccupied && !table[i].isTombstone) {
+                std::cout << table[i].value;
             } else {
-                cout << "- ";
+                std::cout << "-";
+            }
+            if (i < size - 1) {
+                std::cout << " ";
             }
         }
-        cout << endl;
+        std::cout << std::endl;
     }
+
+    size_t getSize() const { return size; }
+    size_t getCount() const { return count; }
 };
+
