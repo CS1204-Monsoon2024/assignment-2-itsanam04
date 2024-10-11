@@ -107,10 +107,10 @@ public:
 };
 
 int main() {
-    // Create a hash table of size 7
-    HashTable ht(7);
+    int initialSize = 7; 
+    HashTable ht(initialSize);
 
-    // Insert some values
+    // Example test case
     ht.insert(1);
     ht.printTable();
     ht.insert(6);
@@ -122,19 +122,10 @@ int main() {
     ht.remove(15);
     ht.printTable();
     ht.insert(29);  
-    ht.printTable();
+    ht.printTable(); 
 
-    // Try to remove a value that doesn't exist
-    ht.remove(5);
-
-    // Try to insert a duplicate value
-    ht.insert(1);
     int find = ht.search(22);
     std::cout << "Found at:" << find << std::endl;
-
-    // Insert more values and print the table
-    ht.insert(2);
-    ht.printTable();
 
     return 0;
 }
