@@ -11,7 +11,7 @@ private:
 
 public:
     HashTable(int size) {
-        tableSize = size;
+        tableSize = size-1;
         table.resize(size, -1);  // Initialize with -1 (indicating empty slots)
         occupied.resize(size, false);  // All slots are initially unoccupied
         numElements = 0;
