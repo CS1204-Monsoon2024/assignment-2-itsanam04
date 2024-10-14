@@ -1,77 +1,107 @@
 #include <iostream>
 #include <vector>
-#include <string>
-#include <cmath>
-
 using namespace std;
 
 class HashTable {
 private:
-    vector<int> table;  // Hash table to store values
-    vector<bool> occupied;  // To track if the bucket is occupied
+    vector<int> table;
+    vector<bool> occupied;
     int tableSize;
+    int numElements;
 
 public:
     HashTable(int size) {
         tableSize = size;
-        table.resize(size, -1);  // Initialize hash table with -1 (indicating empty)
-        occupied.resize(size, false);  // Initialize occupied vector with false
+        table.resize(size, -1);  // Initialize with -1 (indicating empty slots)
+        occupied.resize(size, false);  // All slots are initially unoccupied
+        numElements = 0;
     }
 
-    // Hash function (simple modulo hash)
+    // Simple hash function (mod table size)
     int hashFunction(int key) {
         return key % tableSize;
     }
 
     // Insert function using quadratic probing
     void insert(int key) {
-        int index = hashFunction(key);
-        int i = 0;  // Quadratic probing starts with i = 0
-
-        // Keep probing until an empty spot is found
-        while (occupied[(index + i * i) % tableSize]) {
-            i++;  // Quadratic step (i^2)
-            if (i == tableSize) {
-                cout << "Hash table is full, cannot insert key: " << key << endl;
-                return;
-            }
+        // Check if the key already exists
+        if (search(key) != -1) {
+            cout << "Duplicate key insertion is not allowed" << endl;
+            return;
         }
 
-        // Insert the key in the calculated index
-        index = (index + i * i) % tableSize;
-        table[index] = key;
-        occupied[index] = true;
-        cout << "Inserted key " << key << " at index " << index << endl;
+        int index = hashFunction(key);
+        int i = 0;
+
+        // Quadratic probing: search for the next empty slot
+        while (i < tableSize) {
+            int newIndex = (index + i * i) % tableSize;
+
+            // Insert if the slot is empty
+            if (!occupied[newIndex]) {
+                table[newIndex] = key;
+                occupied[newIndex] = true;
+                numElements++;
+                return;
+            }
+            i++;
+        }
+
+        // If no empty slot was found
+        cout << "Max probing limit reached!" << endl;
     }
 
-    // Search function using quadratic probing
+    // Remove function using quadratic probing
+    void remove(int key) {
+        int index = hashFunction(key);
+        int i = 0;
+
+        // Quadratic probing to find the key
+        while (i < tableSize) {
+            int newIndex = (index + i * i) % tableSize;
+
+            // Key found, remove it
+            if (occupied[newIndex] && table[newIndex] == key) {
+                table[newIndex] = -1;  // Mark slot as empty
+                occupied[newIndex] = false;
+                numElements--;
+                return;
+            }
+            i++;
+        }
+
+        // Key not found
+        cout << "Element not found" << endl;
+    }
+
+    // Search function
     int search(int key) {
         int index = hashFunction(key);
         int i = 0;
 
-        // Keep probing until the key is found or we determine it's not present
-        while (occupied[(index + i * i) % tableSize]) {
+        // Quadratic probing to find the key
+        while (i < tableSize) {
             int newIndex = (index + i * i) % tableSize;
-            if (table[newIndex] == key) {
-                return newIndex;  // Key found
+
+            // Key found
+            if (occupied[newIndex] && table[newIndex] == key) {
+                return newIndex;
             }
             i++;
-            if (i == tableSize) {
-                break;  // Stop searching after probing the entire table
-            }
         }
 
         return -1;  // Key not found
     }
 
-    // Display the hash table
-    void display() {
+    // Print the hash table
+    void printTable() {
         for (int i = 0; i < tableSize; i++) {
-            if (occupied[i])
-                cout << "Index " << i << ": " << table[i] << endl;
-            else
-                cout << "Index " << i << ": empty" << endl;
+            if (occupied[i]) {
+                cout << table[i] << " ";
+            } else {
+                cout << "- ";
+            }
         }
+        cout << endl;
     }
 };
-
