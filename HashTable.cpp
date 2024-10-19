@@ -1,21 +1,21 @@
 #include <iostream>
-#include <vector>
+#include <vector> //need vector for dynamic resizing 
 using namespace std;
 
 class HashTable {
 private:
-    vector<int> table;
-    vector<bool> occupied;
-    int tableSize;
-    int numElements;
+    vector<int> table; //creaing a hash table
+    int size; //size of the hash table
+    vector<bool> occ ; //keeps track of occupied buckets
+    int elements_count; // keeps a count of numbers stored
 
-    // Simple hash function (mod table size)
+    // Simple hash function 
     int hashFunction(int key) {
-        return key % tableSize;
-    }
+        return key % size;
+    } 
 
-    // Helper function to check if a number is prime
-    bool isPrime(int num) {
+    // checks if a number is prime
+    bool is_prime(int num) {
         if (num <= 1) return false;
         for (int i = 2; i * i <= num; i++) {
             if (num % i == 0) return false;
@@ -23,35 +23,34 @@ private:
         return true;
     }
 
-    // Helper function to find the next prime number (for resizing)
-    int nextPrime(int currentSize) {
-        int newSize = currentSize * 2;
-        while (!isPrime(newSize)) {
-            newSize++;
+    // finds the next prime number. Ex: If the double of prime is composite, it will find the next prime number\\
+    int next_prime(int current_size) {
+        int new_size= current_size * 2;
+        while (!is_prime(new_size)) { 
+            new_size++;
         }
-        return newSize;
-    }
-
+        return new_size;
+    } 
     // Function to resize and rehash the table
     void resize() {
-        int newSize = nextPrime(tableSize);  // Get the next prime number size
+        int new_size = next_prime(size);  // Get the next prime number size
 
-        vector<int> newTable(newSize, -1);  // Create new table with the new size
-        vector<bool> newOccupied(newSize, false);  // New occupancy vector
+        vector<int> new_table(new_size, -1);  // Create new table with the new size
+        vector<bool> new_occ(new_size, false);  
 
         // Rehash all existing elements into the new table
-        for (int i = 0; i < tableSize; i++) {
-            if (occupied[i]) {
+        for (int i = 0; i < size; i++) {
+            if (occ[i]) {
                 int key = table[i];
-                int index = key % newSize;
+                int index = key % new_size;
                 int j = 0;
 
                 // Use quadratic probing in the new table
-                while (j < newSize) {
-                    int newIndex = (index + j * j) % newSize;
-                    if (!newOccupied[newIndex]) {
-                        newTable[newIndex] = key;
-                        newOccupied[newIndex] = true;
+                while (j < new_size) {
+                    int new_index = (index + j * j) % new_size;
+                    if (!new_occ[new_index]) {
+                        new_table[new_index] = key;
+                        new_occ[new_index] = true;
                         break;
                     }
                     j++;
@@ -60,27 +59,26 @@ private:
         }
 
         // Replace the old table with the new table
-        table = newTable;
-        occupied = newOccupied;
-        tableSize = newSize;
+        table = new_table;
+        occ = new_occ;
+        size = new_size;
     }
 
 public:
-    HashTable(int size) {
-        tableSize = size;
-        table.resize(size, -1);  // Initialize with -1 (indicating empty slots)
-        occupied.resize(size, false);  // All slots are initially unoccupied
-        numElements = 0;
+    HashTable(int n) {
+        size = n;
+        table.resize(n, -1);  // intialization with -1 indicates empty slots
+        occ.resize(n, false);  // 
+        elements_count = 0;
     }
 
     // Insert function using quadratic probing
     void insert(int key) {
         // Resize the table if it's more than 80% full
-        if (numElements >= tableSize * 0.8) {
+        if (elements_count >= size * 0.8) {
             resize();
         }
-
-        // Check if the key already exists
+        // Check if the key already exists, if it does then raises the duplicate error
         if (search(key) != -1) {
             cout << "Duplicate key insertion is not allowed" << endl;
             return;
@@ -89,38 +87,37 @@ public:
         int index = hashFunction(key);
         int i = 0;
 
-        // Quadratic probing: search for the next empty slot
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
+        //  Search for the next empty slot using quadratic probing
+        while (i < size) {
+            int new_index = (index + i * i) % size;
 
             // Insert if the slot is empty
-            if (!occupied[newIndex]) {
-                table[newIndex] = key;
-                occupied[newIndex] = true;
-                numElements++;
+            if (!occ[new_index]) {
+                table[new_index] = key;
+                occ[new_index] = true;
+                elements_count++;
                 return;
             }
             i++;
         }
 
-        // If no empty slot was found
         cout << "Max probing limit reached!" << endl;
     }
 
-    // Remove function using quadratic probing
+    // Remove function
     void remove(int key) {
         int index = hashFunction(key);
         int i = 0;
 
         // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
+        while (i < size) {
+            int new_index = (index + i * i) % size;
 
-            // Key found, remove it
-            if (occupied[newIndex] && table[newIndex] == key) {
-                table[newIndex] = -1;  // Mark slot as empty
-                occupied[newIndex] = false;
-                numElements--;
+            // Remove the key if found
+            if (occ[new_index] && table[new_index] == key) {
+                table[new_index] = -1;  // Mark slot as empty
+                occ[new_index] = false;
+                elements_count--; //decrease in the size of the table
                 return;
             }
             i++;
@@ -136,23 +133,23 @@ public:
         int i = 0;
 
         // Quadratic probing to find the key
-        while (i < tableSize) {
-            int newIndex = (index + i * i) % tableSize;
+        while (i < size) {
+            int new_index = (index + i * i) % size;
 
-            // Key found
-            if (occupied[newIndex] && table[newIndex] == key) {
-                return newIndex;
+            // if key is found, return it
+            if (occ[new_index] && table[new_index] == key) {
+                return new_index;
             }
             i++;
         }
 
-        return -1;  // Key not found
+        return -1;  // If key not found, return -1
     }
 
     // Print the hash table
     void printTable() {
-        for (int i = 0; i < tableSize; i++) {
-            if (occupied[i]) {
+        for (int i = 0; i < size; i++) {
+            if (occ[i]) {
                 cout << table[i] << " ";
             } else {
                 cout << "- ";
