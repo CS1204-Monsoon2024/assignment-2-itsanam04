@@ -75,8 +75,8 @@ public:
 
     // Insert function using quadratic probing
     void insert(int key) {
-        // Resize the table if it's more than half full
-        if (numElements >= tableSize / 2) {
+        // Resize the table if it's more than 80% full
+        if (numElements >= tableSize * 0.8) {
             resize();
         }
 
