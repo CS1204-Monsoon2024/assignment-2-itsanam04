@@ -1,5 +1,5 @@
 #include <iostream>
-#include <vector> //need vector for dynamic resizing 
+#include <vector> 
 using namespace std;
 
 class HashTable {
