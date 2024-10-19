@@ -1,13 +1,18 @@
 #include <iostream>
-#include <cmath>
+#include <vector>
 using namespace std;
 
 class HashTable {
 private:
-    int* table;        // Array for hash table
-    int tableSize;     // Current size of hash table
-    int numElements;   // Number of elements currently in the table
-    int maxProbing;    // Maximum number of quadratic probes allowed
+    vector<int> table;
+    vector<bool> occupied;
+    int tableSize;
+    int numElements;
+
+    // Simple hash function (mod table size)
+    int hashFunction(int key) {
+        return key % tableSize;
+    }
 
     // Helper function to check if a number is prime
     bool isPrime(int num) {
@@ -27,121 +32,132 @@ private:
         return newSize;
     }
 
-    // Function to resize the hash table
+    // Function to resize and rehash the table
     void resize() {
-        // Find the next prime number size
-        int newSize = nextPrime(tableSize);
-        
-        // Create a new table of the new size
-        int* newTable = new int[newSize];
-        for (int i = 0; i < newSize; i++) {
-            newTable[i] = -1;  // Initialize with empty values (assuming -1 indicates empty)
-        }
+        int newSize = nextPrime(tableSize);  // Get the next prime number size
 
-        // Rehash all the existing elements into the new table
+        vector<int> newTable(newSize, -1);  // Create new table with the new size
+        vector<bool> newOccupied(newSize, false);  // New occupancy vector
+
+        // Rehash all existing elements into the new table
         for (int i = 0; i < tableSize; i++) {
-            if (table[i] != -1) {
-                int newIndex = table[i] % newSize;
-                int j = 1;
-                // Handle collisions using quadratic probing in the new table
-                while (newTable[newIndex] != -1) {
-                    newIndex = (newIndex + j * j) % newSize;  // Quadratic probing
+            if (occupied[i]) {
+                int key = table[i];
+                int index = key % newSize;
+                int j = 0;
+
+                // Use quadratic probing in the new table
+                while (j < newSize) {
+                    int newIndex = (index + j * j) % newSize;
+                    if (!newOccupied[newIndex]) {
+                        newTable[newIndex] = key;
+                        newOccupied[newIndex] = true;
+                        break;
+                    }
                     j++;
                 }
-                newTable[newIndex] = table[i];
             }
         }
 
-        // Delete the old table and replace it with the new one
-        delete[] table;
+        // Replace the old table with the new table
         table = newTable;
+        occupied = newOccupied;
         tableSize = newSize;
     }
 
 public:
-    // Constructor to initialize table with initial size
     HashTable(int size) {
         tableSize = size;
+        table.resize(size, -1);  // Initialize with -1 (indicating empty slots)
+        occupied.resize(size, false);  // All slots are initially unoccupied
         numElements = 0;
-        maxProbing = size / 2; // Quadratic probing limit (half the table size for efficiency)
-        table = new int[tableSize];
-        for (int i = 0; i < tableSize; i++) {
-            table[i] = -1;  // Initialize table with empty values
-        }
     }
 
-    // Destructor to clean up memory
-    ~HashTable() {
-        delete[] table;
-    }
-
-    // Insert a value into the hash table using quadratic probing
-    void insert(int value) {
+    // Insert function using quadratic probing
+    void insert(int key) {
+        // Resize the table if it's more than half full
         if (numElements >= tableSize / 2) {
-            resize();  // Resize the table if it is more than half full
+            resize();
         }
 
-        int index = value % tableSize;
-        int j = 1;  // Quadratic probing counter
-
-        // Handle collisions using quadratic probing
-        while (table[index] != -1 && table[index] != value) {
-            if (j > maxProbing) {
-                std::cout << "Max probing limit reached!" << std::endl;
-                return;
-            }
-            index = (index + j * j) % tableSize;
-            j++;
-        }
-
-        if (table[index] == value) {
-            std::cout << "Duplicate key insertion is not allowed" << std::endl;
+        // Check if the key already exists
+        if (search(key) != -1) {
+            cout << "Duplicate key insertion is not allowed" << endl;
             return;
         }
 
-        table[index] = value;
-        numElements++;
-    }
+        int index = hashFunction(key);
+        int i = 0;
 
-    // Remove a value from the hash table
-    void remove(int value) {
-        int index = search(value);
-        if (index == -1) {
-            std::cout << "Element not found" << std::endl;
-        } else {
-            table[index] = -1;  // Mark the position as empty
-            numElements--;
-        }
-    }
+        // Quadratic probing: search for the next empty slot
+        while (i < tableSize) {
+            int newIndex = (index + i * i) % tableSize;
 
-    // Search for a value in the hash table using quadratic probing
-    int search(int value) {
-        int index = value % tableSize;
-        int j = 1;
-        int startIndex = index;
-
-        while (table[index] != -1) {
-            if (table[index] == value) {
-                return index;
+            // Insert if the slot is empty
+            if (!occupied[newIndex]) {
+                table[newIndex] = key;
+                occupied[newIndex] = true;
+                numElements++;
+                return;
             }
-            index = (index + j * j) % tableSize;
-            j++;
-            if (j > maxProbing || index == startIndex) {
-                break;  // If max probing reached or full loop, stop searching
-            }
+            i++;
         }
-        return -1;
+
+        // If no empty slot was found
+        cout << "Max probing limit reached!" << endl;
     }
 
-    // Print the current contents of the hash table
+    // Remove function using quadratic probing
+    void remove(int key) {
+        int index = hashFunction(key);
+        int i = 0;
+
+        // Quadratic probing to find the key
+        while (i < tableSize) {
+            int newIndex = (index + i * i) % tableSize;
+
+            // Key found, remove it
+            if (occupied[newIndex] && table[newIndex] == key) {
+                table[newIndex] = -1;  // Mark slot as empty
+                occupied[newIndex] = false;
+                numElements--;
+                return;
+            }
+            i++;
+        }
+
+        // Key not found
+        cout << "Element not found" << endl;
+    }
+
+    // Search function
+    int search(int key) {
+        int index = hashFunction(key);
+        int i = 0;
+
+        // Quadratic probing to find the key
+        while (i < tableSize) {
+            int newIndex = (index + i * i) % tableSize;
+
+            // Key found
+            if (occupied[newIndex] && table[newIndex] == key) {
+                return newIndex;
+            }
+            i++;
+        }
+
+        return -1;  // Key not found
+    }
+
+    // Print the hash table
     void printTable() {
         for (int i = 0; i < tableSize; i++) {
-            if (table[i] == -1) {
-                std::cout << "- ";
+            if (occupied[i]) {
+                cout << table[i] << " ";
             } else {
-                std::cout << table[i] << " ";
+                cout << "- ";
             }
         }
-        std::cout << std::endl;
+        cout << endl;
     }
 };
